@@ -1,0 +1,5 @@
+{
+  "name": "HandleDat",
+  "description": "A focused, disciplined productivity timer that uses Gemini to break down big tasks and provides hype-man motivational quotes.",
+  "requestFramePermissions": []
+}
