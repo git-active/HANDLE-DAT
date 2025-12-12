@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import TimerDisplay from './components/TimerDisplay';
 import TaskList from './components/TaskList';
-import { TimerMode, DEFAULT_SETTINGS, Task } from './types';
+import SettingsModal from './components/SettingsModal';
+import { TimerMode, DEFAULT_SETTINGS, Task, TimerSettings, WaveSpeed } from './types';
 import { getHypeQuote } from './services/geminiService';
 import confetti from 'canvas-confetti';
-import { Target, Coffee, Battery, Sliders, BellRing, X, Zap } from 'lucide-react';
+import { Target, Coffee, Battery, Sliders, BellRing, X, Settings } from 'lucide-react';
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<TimerMode>(TimerMode.FOCUS);
@@ -14,11 +15,12 @@ const App: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [notes, setNotes] = useState<string>(""); // Notepad state
   const [quote, setQuote] = useState<string>("Bro. Handle dat.");
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<TimerSettings>(DEFAULT_SETTINGS);
   const [currentTime, setCurrentTime] = useState(new Date());
   
-  // Custom Timer Modal State
+  // Modals
   const [showCustomModal, setShowCustomModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [tempCustomValue, setTempCustomValue] = useState(customDuration.toString());
 
   // Alarm Alert State
@@ -34,7 +36,35 @@ const App: React.FC = () => {
     return audioContextRef.current;
   };
 
+  // Theme Sync Effect
+  useEffect(() => {
+    const root = document.documentElement;
+    switch (mode) {
+      case TimerMode.FOCUS:
+        // Lime
+        root.style.setProperty('--brand-rgb', '190 242 100');       // #bef264
+        root.style.setProperty('--brand-light-rgb', '217 249 157'); // #d9f99d
+        break;
+      case TimerMode.SHORT_BREAK:
+        // Cyan
+        root.style.setProperty('--brand-rgb', '34 211 238');        // #22d3ee
+        root.style.setProperty('--brand-light-rgb', '165 243 252'); // #a5f3fc
+        break;
+      case TimerMode.LONG_BREAK:
+        // Purple
+        root.style.setProperty('--brand-rgb', '192 132 252');       // #c084fc
+        root.style.setProperty('--brand-light-rgb', '233 213 255'); // #e9d5ff
+        break;
+      case TimerMode.CUSTOM:
+        // Orange
+        root.style.setProperty('--brand-rgb', '251 146 60');        // #fb923c
+        root.style.setProperty('--brand-light-rgb', '254 215 170'); // #fed7aa
+        break;
+    }
+  }, [mode]);
+
   const playBeep = () => {
+    if (!settings.soundEnabled) return;
     const ctx = getAudioContext();
     if (ctx && ctx.state !== 'closed') {
         const osc = ctx.createOscillator();
@@ -50,6 +80,7 @@ const App: React.FC = () => {
   };
 
   const playAlarmSound = () => {
+    if (!settings.soundEnabled) return;
     const ctx = getAudioContext();
     if (ctx && ctx.state !== 'closed') {
         const now = ctx.currentTime;
@@ -109,6 +140,16 @@ const App: React.FC = () => {
         setTimeLeft(val * 60);
         setShowCustomModal(false);
     }
+  };
+  
+  const handleSettingsSave = (newSettings: TimerSettings) => {
+      setSettings(newSettings);
+      // If timer is NOT running, update the current display to reflect new settings immediately if applicable
+      if (!isRunning) {
+        if (mode === TimerMode.FOCUS) setTimeLeft(newSettings.focusDuration * 60);
+        if (mode === TimerMode.SHORT_BREAK) setTimeLeft(newSettings.shortBreakDuration * 60);
+        if (mode === TimerMode.LONG_BREAK) setTimeLeft(newSettings.longBreakDuration * 60);
+      }
   };
 
   const fetchNewQuote = async (currentMode: TimerMode) => {
@@ -194,17 +235,41 @@ const App: React.FC = () => {
   const formatTime = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(date);
   };
+  
+  const getWaveClass = (layer: 1 | 2) => {
+      const speed = settings.waveSpeed;
+      if (speed === 'frozen') return '';
+      
+      if (layer === 1) {
+          if (speed === 'slow') return 'animate-wave-super-slow';
+          if (speed === 'normal') return 'animate-wave-slow';
+          if (speed === 'fast') return 'animate-wave';
+      } else {
+          if (speed === 'slow') return 'animate-wave-slow';
+          if (speed === 'normal') return 'animate-wave';
+          if (speed === 'fast') return 'animate-wave-fast';
+      }
+      return 'animate-wave';
+  };
 
   return (
-    <div className="min-h-screen p-4 md:p-8 flex items-center justify-center font-sans relative overflow-hidden">
+    <div className="min-h-screen p-4 md:p-8 flex items-center justify-center font-sans relative overflow-hidden transition-colors duration-500">
       
       {/* Background Grid */}
       <div className="absolute inset-0 z-0 opacity-10" 
            style={{
-             backgroundImage: 'radial-gradient(#bef264 1px, transparent 1px)',
+             backgroundImage: 'radial-gradient(rgb(var(--brand-rgb)) 1px, transparent 1px)',
              backgroundSize: '30px 30px'
            }}>
       </div>
+      
+      {showSettingsModal && (
+          <SettingsModal 
+            settings={settings} 
+            onSave={handleSettingsSave} 
+            onClose={() => setShowSettingsModal(false)} 
+          />
+      )}
 
       {/* Alarm Alert Overlay */}
       {activeAlarmTask && (
@@ -262,20 +327,30 @@ const App: React.FC = () => {
           <header className="flex justify-between items-end mb-6">
              <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-3">
-                    <div className="w-3 h-10 bg-brand-neon"></div>
+                    <div className="w-3 h-10 bg-brand-neon transition-colors duration-300"></div>
                     <h1 className="text-5xl font-black text-white tracking-tighter italic uppercase">
                     Handle-Dat
                     </h1>
                 </div>
                 <p className="text-brand-muted font-mono text-xs pl-6 uppercase tracking-widest">
-                    Discipline Protocol v2.0
+                    Discipline Protocol v2.1
                 </p>
              </div>
 
-             {/* Minimalist Clock */}
-             <div className="text-right font-mono text-brand-muted/70 flex flex-col items-end leading-tight">
-                 <span className="text-[10px] tracking-widest uppercase">{formatDate(currentTime)}</span>
-                 <span className="text-xl font-bold text-brand-text">{formatTime(currentTime)}</span>
+             <div className="flex items-center gap-4">
+                 {/* Settings Button */}
+                 <button 
+                    onClick={() => setShowSettingsModal(true)}
+                    className="p-2 text-brand-muted hover:text-brand-neon transition-colors"
+                    title="Settings"
+                 >
+                     <Settings size={20} />
+                 </button>
+                 {/* Minimalist Clock */}
+                 <div className="text-right font-mono text-brand-muted/70 flex flex-col items-end leading-tight">
+                     <span className="text-[10px] tracking-widest uppercase">{formatDate(currentTime)}</span>
+                     <span className="text-xl font-bold text-brand-text">{formatTime(currentTime)}</span>
+                 </div>
              </div>
           </header>
 
@@ -312,14 +387,35 @@ const App: React.FC = () => {
             onEditTime={() => { setTempCustomValue(customDuration.toString()); setShowCustomModal(true); }}
           />
 
-          {/* Quote Card */}
-          <div className="bg-brand-surface border-l-4 border-brand-neon p-6 rounded-r-2xl shadow-lg relative min-h-[100px] flex items-center">
-             <div className="absolute top-4 right-4 opacity-20 text-brand-neon">
-               <Zap size={24} />
+          {/* Quote Card with Waves */}
+          <div className="relative overflow-hidden rounded-2xl bg-brand-surface border border-brand-border/50 shadow-xl min-h-[160px] flex flex-col justify-center items-center group">
+             
+             {/* Quote Text */}
+             <div className="relative z-20 p-8 text-center max-w-lg">
+                 <p className="font-bold text-xl md:text-2xl text-white leading-tight font-sans tracking-tight drop-shadow-lg">
+                   "{quote}"
+                 </p>
              </div>
-             <p className="font-bold text-xl text-white leading-tight font-sans tracking-tight">
-               "{quote}"
-             </p>
+
+             {/* Wave Animation Layer 1 (Back) */}
+             <div className={`absolute bottom-0 left-0 w-[200%] h-full z-0 opacity-20 flex ${getWaveClass(1)}`}>
+                 <svg className="w-1/2 h-full text-brand-neon fill-current transform scale-y-50 origin-bottom transition-colors duration-500" viewBox="0 0 1440 320" preserveAspectRatio="none">
+                    <path fillOpacity="1" d="M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+                 </svg>
+                 <svg className="w-1/2 h-full text-brand-neon fill-current transform scale-y-50 origin-bottom transition-colors duration-500" viewBox="0 0 1440 320" preserveAspectRatio="none">
+                    <path fillOpacity="1" d="M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+                 </svg>
+             </div>
+
+             {/* Wave Animation Layer 2 (Front) */}
+             <div className={`absolute bottom-0 left-0 w-[200%] h-full z-10 opacity-30 flex ${getWaveClass(2)}`}>
+                  <svg className="w-1/2 h-full text-brand-neon fill-current transform scale-y-75 origin-bottom transition-colors duration-500" viewBox="0 0 1440 320" preserveAspectRatio="none">
+                    <path fillOpacity="1" d="M0,64L48,80C96,96,192,128,288,128C384,128,480,96,576,90.7C672,85,768,107,864,128C960,149,1056,171,1152,165.3C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+                  </svg>
+                  <svg className="w-1/2 h-full text-brand-neon fill-current transform scale-y-75 origin-bottom transition-colors duration-500" viewBox="0 0 1440 320" preserveAspectRatio="none">
+                    <path fillOpacity="1" d="M0,64L48,80C96,96,192,128,288,128C384,128,480,96,576,90.7C672,85,768,107,864,128C960,149,1056,171,1152,165.3C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+                  </svg>
+             </div>
           </div>
         </div>
 

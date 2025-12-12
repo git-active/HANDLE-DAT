@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Loader2, Bell, X, Clock, Timer, Zap, Trash2, Check, FileText, ListTodo } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { Task } from '../types';
 import { breakDownTask } from '../services/geminiService';
 
@@ -19,6 +20,43 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, setTasks, notes, setNotes })
   // Reminder Form State
   const [reminderType, setReminderType] = useState<'duration' | 'time'>('duration');
   const [reminderValue, setReminderValue] = useState(''); // Stores minutes string or "HH:MM" string
+
+  const triggerConfetti = () => {
+    // Colors: Brand Neon, Cyan (Short Break), Purple (Long Break), Orange (Custom), White
+    const colors = ['#bef264', '#22d3ee', '#c084fc', '#fb923c', '#ffffff'];
+    
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: colors,
+      disableForReducedMotion: true,
+      zIndex: 100,
+    });
+  };
+
+  const playSuccessSound = () => {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+    
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    // Nice crisp "ding"
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
+    osc.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.1); // A6
+    
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.4);
+  };
 
   const addTask = (title: string, isAi = false) => {
     if (!title.trim()) return;
@@ -54,7 +92,17 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, setTasks, notes, setNotes })
   };
 
   const toggleTask = (id: string) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+    setTasks(prev => prev.map(t => {
+      if (t.id === id) {
+        // If we are marking it as complete (it was false, now becoming true)
+        if (!t.completed) {
+          triggerConfetti();
+          playSuccessSound();
+        }
+        return { ...t, completed: !t.completed };
+      }
+      return t;
+    }));
   };
 
   const deleteTask = (id: string) => {
@@ -156,17 +204,17 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, setTasks, notes, setNotes })
                 >
                     <button
                     onClick={() => toggleTask(task.id)}
-                    className={`w-5 h-5 flex-shrink-0 rounded border-2 flex items-center justify-center transition-colors ${
+                    className={`w-6 h-6 flex-shrink-0 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${
                         task.completed 
-                        ? 'bg-brand-neon border-brand-neon text-brand-black' 
-                        : 'border-brand-muted text-transparent hover:border-brand-neon'
+                        ? 'bg-brand-neon border-brand-neon text-brand-black scale-105' 
+                        : 'border-brand-muted text-transparent hover:border-brand-neon hover:scale-110 active:scale-90'
                     }`}
                     >
-                    <Check size={14} strokeWidth={4} />
+                    <Check size={16} strokeWidth={4} />
                     </button>
                     
                     <div className="flex-1 min-w-0">
-                    <span className={`text-brand-text font-semibold truncate block ${task.completed ? 'line-through decoration-2' : ''}`}>
+                    <span className={`text-brand-text font-semibold truncate block transition-all duration-300 ${task.completed ? 'line-through decoration-2 text-brand-muted origin-left scale-[0.98]' : ''}`}>
                         {task.title}
                     </span>
                     {task.reminderTime && task.reminderTime > Date.now() && (
@@ -182,7 +230,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, setTasks, notes, setNotes })
                     </div>
 
                     {task.isAiGenerated && (
-                        <Zap size={14} className="text-purple-400 opacity-70 flex-shrink-0" />
+                        <Zap size={14} className="text-brand-neon opacity-70 flex-shrink-0" />
                     )}
 
                     {/* Reminder Button */}

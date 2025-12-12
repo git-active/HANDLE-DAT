@@ -14,12 +14,16 @@ export interface Task {
   reminderFormat?: 'time' | 'duration'; // For display purposes
 }
 
+export type WaveSpeed = 'slow' | 'normal' | 'fast' | 'frozen';
+
 export interface TimerSettings {
   focusDuration: number;
   shortBreakDuration: number;
   longBreakDuration: number;
   autoStartBreaks: boolean;
   autoStartFocus: boolean;
+  waveSpeed: WaveSpeed;
+  soundEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: TimerSettings = {
@@ -28,4 +32,6 @@ export const DEFAULT_SETTINGS: TimerSettings = {
   longBreakDuration: 15,
   autoStartBreaks: false,
   autoStartFocus: false,
+  waveSpeed: 'normal',
+  soundEnabled: true,
 };
