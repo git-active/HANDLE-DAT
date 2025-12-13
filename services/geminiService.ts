@@ -1,10 +1,9 @@
-import { GoogleGenAI, Type, Schema } from "@google/genai";
-
-const apiKey = process.env.API_KEY || '';
-const ai = new GoogleGenAI({ apiKey });
+import { GoogleGenAI, Type } from "@google/genai";
 
 export const getHypeQuote = async (mode: string): Promise<string> => {
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: `Generate exactly ONE short, punchy, motivational quote for someone in "${mode}" mode.
@@ -36,6 +35,8 @@ export const getHypeQuote = async (mode: string): Promise<string> => {
 
 export const breakDownTask = async (taskDescription: string): Promise<string[]> => {
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: `Break down the following task into 3-5 smaller, actionable subtasks that can each be done in roughly 25 minutes. 
@@ -44,6 +45,7 @@ export const breakDownTask = async (taskDescription: string): Promise<string[]> 
       Return ONLY a JSON array of strings.`,
       config: {
         responseMimeType: "application/json",
+        thinkingConfig: { thinkingBudget: 0 },
         responseSchema: {
           type: Type.ARRAY,
           items: {

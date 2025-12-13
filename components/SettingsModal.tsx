@@ -26,8 +26,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
     setLocalSettings(DEFAULT_SETTINGS);
   };
 
+  const handleSave = () => {
+    onSave(localSettings);
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-brand-surface w-full max-w-md p-6 rounded-3xl shadow-2xl border border-brand-border">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-white">Settings</h2>
@@ -36,7 +41,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
           </button>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2 scrollbar-hide">
           
           {/* Audio */}
           <div className="flex items-center justify-between p-4 bg-brand-dark rounded-2xl">
@@ -119,7 +124,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose
                 Reset Defaults
             </button>
             <button 
-                onClick={() => { onSave(localSettings); onClose(); }}
+                onClick={handleSave}
                 className="flex-[2] py-3 bg-brand-neon text-brand-black rounded-xl font-bold hover:bg-brand-lime transition-colors"
             >
                 Save Changes

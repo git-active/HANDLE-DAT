@@ -150,6 +150,8 @@ const App: React.FC = () => {
         if (mode === TimerMode.SHORT_BREAK) setTimeLeft(newSettings.shortBreakDuration * 60);
         if (mode === TimerMode.LONG_BREAK) setTimeLeft(newSettings.longBreakDuration * 60);
       }
+      // Refresh quote when settings are saved
+      fetchNewQuote(mode);
   };
 
   const fetchNewQuote = async (currentMode: TimerMode) => {
@@ -306,135 +308,104 @@ const App: React.FC = () => {
                         type="number" 
                         value={tempCustomValue}
                         onChange={(e) => setTempCustomValue(e.target.value)}
-                        className="w-full text-4xl font-black text-center text-white bg-brand-dark rounded-xl p-4 outline-none border-2 border-transparent focus:border-brand-neon"
+                        className="w-full text-4xl font-black text-center text-white bg-brand-dark rounded-xl p-4 outline-none"
                         autoFocus
                     />
                 </div>
                 <button 
                     onClick={handleCustomDurationSubmit}
-                    className="w-full py-3 bg-brand-neon text-brand-black rounded-xl font-bold uppercase tracking-wider hover:bg-brand-lime transition-colors"
+                    className="w-full py-3 bg-brand-neon text-brand-black rounded-xl font-bold uppercase tracking-widest hover:bg-brand-lime transition-colors"
                 >
-                    Set Timer
+                    Let's Go
                 </button>
              </div>
         </div>
       )}
 
-      <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-8 z-10">
+      <div className="relative z-10 w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 items-stretch h-[85vh]">
         
-        {/* Left Column: Header & Timer */}
-        <div className="space-y-6">
-          <header className="flex justify-between items-end mb-6">
-             <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-3">
-                    <div className="w-3 h-10 bg-brand-neon transition-colors duration-300"></div>
-                    <h1 className="text-5xl font-black text-white tracking-tighter italic uppercase">
-                    Handle-Dat
-                    </h1>
-                </div>
-                <p className="text-brand-muted font-mono text-xs pl-6 uppercase tracking-widest">
-                    Discipline Protocol v2.1
-                </p>
-             </div>
+        {/* LEFT COLUMN - TIMER */}
+        <div className="flex flex-col gap-6 h-full justify-center">
+            
+            {/* Header / Mode Switcher */}
+            <div className="flex justify-center bg-brand-dark/40 p-1.5 rounded-2xl backdrop-blur-sm border border-brand-border/30 self-center md:self-start">
+                {[
+                    { id: TimerMode.FOCUS, icon: Target, label: 'Focus' },
+                    { id: TimerMode.SHORT_BREAK, icon: Coffee, label: 'Short' },
+                    { id: TimerMode.LONG_BREAK, icon: Battery, label: 'Long' },
+                    { id: TimerMode.CUSTOM, icon: Sliders, label: 'Custom' },
+                ].map((m) => (
+                    <button
+                        key={m.id}
+                        onClick={() => switchMode(m.id as TimerMode)}
+                        className={`
+                            relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300
+                            ${mode === m.id ? 'text-brand-black bg-brand-neon shadow-lg scale-105' : 'text-brand-muted hover:text-white hover:bg-white/5'}
+                        `}
+                    >
+                        <m.icon size={16} strokeWidth={3} />
+                        <span className="uppercase tracking-wide hidden sm:inline">{m.label}</span>
+                    </button>
+                ))}
+            </div>
 
-             <div className="flex items-center gap-4">
-                 {/* Settings Button */}
-                 <button 
-                    onClick={() => setShowSettingsModal(true)}
-                    className="p-2 text-brand-muted hover:text-brand-neon transition-colors"
-                    title="Settings"
-                 >
-                     <Settings size={20} />
-                 </button>
-                 {/* Minimalist Clock */}
-                 <div className="text-right font-mono text-brand-muted/70 flex flex-col items-end leading-tight">
-                     <span className="text-[10px] tracking-widest uppercase">{formatDate(currentTime)}</span>
-                     <span className="text-xl font-bold text-brand-text">{formatTime(currentTime)}</span>
-                 </div>
-             </div>
-          </header>
+            <TimerDisplay 
+                timeLeft={timeLeft} 
+                totalTime={getTotalTime()}
+                mode={mode}
+                isRunning={isRunning} 
+                onToggle={toggleTimer} 
+                onReset={resetTimer}
+                onEditTime={() => setShowCustomModal(true)}
+            />
 
-          {/* Mode Switcher */}
-          <div className="grid grid-cols-4 gap-2 bg-brand-dark/50 p-2 rounded-2xl border border-brand-border">
-            {[
-              { m: TimerMode.FOCUS, icon: Target, label: 'LOCK IN' },
-              { m: TimerMode.SHORT_BREAK, icon: Coffee, label: 'REST' },
-              { m: TimerMode.LONG_BREAK, icon: Battery, label: 'LONG' },
-              { m: TimerMode.CUSTOM, icon: Sliders, label: 'OWN' }
-            ].map((item) => (
-              <button
-                key={item.m}
-                onClick={() => switchMode(item.m)}
-                className={`flex flex-col items-center justify-center gap-1 py-3 px-1 rounded-xl transition-all duration-200 ${
-                  mode === item.m 
-                    ? 'bg-brand-surface border border-brand-border shadow-lg text-white' 
-                    : 'text-brand-muted hover:bg-brand-surface/50 hover:text-brand-text'
-                }`}
-              >
-                <item.icon size={18} className={mode === item.m ? 'text-brand-neon' : ''} />
-                <span className="font-bold text-[10px] uppercase tracking-wider">{item.label}</span>
-              </button>
-            ))}
-          </div>
-
-          <TimerDisplay
-            timeLeft={timeLeft}
-            totalTime={getTotalTime()}
-            mode={mode}
-            isRunning={isRunning}
-            onToggle={toggleTimer}
-            onReset={resetTimer}
-            onEditTime={() => { setTempCustomValue(customDuration.toString()); setShowCustomModal(true); }}
-          />
-
-          {/* Quote Card with Waves */}
-          <div className="relative overflow-hidden rounded-2xl bg-brand-surface border border-brand-border/50 shadow-xl min-h-[160px] flex flex-col justify-center items-center group">
-             
-             {/* Quote Text */}
-             <div className="relative z-20 p-8 text-center max-w-lg">
-                 <p className="font-bold text-xl md:text-2xl text-white leading-tight font-sans tracking-tight drop-shadow-lg">
-                   "{quote}"
+            {/* Quote / Status */}
+            <div className="bg-brand-dark/30 backdrop-blur-sm rounded-2xl p-6 border border-brand-border/30 text-center relative overflow-hidden group">
+                 <p className="text-brand-text font-medium text-lg italic relative z-10 transition-all duration-500">
+                    "{quote}"
                  </p>
-             </div>
+                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+            </div>
 
-             {/* Wave Animation Layer 1 (Back) */}
-             <div className={`absolute bottom-0 left-0 w-[200%] h-full z-0 opacity-20 flex ${getWaveClass(1)}`}>
-                 <svg className="w-1/2 h-full text-brand-neon fill-current transform scale-y-50 origin-bottom transition-colors duration-500" viewBox="0 0 1440 320" preserveAspectRatio="none">
-                    <path fillOpacity="1" d="M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
-                 </svg>
-                 <svg className="w-1/2 h-full text-brand-neon fill-current transform scale-y-50 origin-bottom transition-colors duration-500" viewBox="0 0 1440 320" preserveAspectRatio="none">
-                    <path fillOpacity="1" d="M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
-                 </svg>
-             </div>
-
-             {/* Wave Animation Layer 2 (Front) */}
-             <div className={`absolute bottom-0 left-0 w-[200%] h-full z-10 opacity-30 flex ${getWaveClass(2)}`}>
-                  <svg className="w-1/2 h-full text-brand-neon fill-current transform scale-y-75 origin-bottom transition-colors duration-500" viewBox="0 0 1440 320" preserveAspectRatio="none">
-                    <path fillOpacity="1" d="M0,64L48,80C96,96,192,128,288,128C384,128,480,96,576,90.7C672,85,768,107,864,128C960,149,1056,171,1152,165.3C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
-                  </svg>
-                  <svg className="w-1/2 h-full text-brand-neon fill-current transform scale-y-75 origin-bottom transition-colors duration-500" viewBox="0 0 1440 320" preserveAspectRatio="none">
-                    <path fillOpacity="1" d="M0,64L48,80C96,96,192,128,288,128C384,128,480,96,576,90.7C672,85,768,107,864,128C960,149,1056,171,1152,165.3C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
-                  </svg>
-             </div>
-          </div>
+             {/* Metadata */}
+             <div className="flex justify-between items-center px-2 text-brand-muted text-xs font-mono font-bold tracking-widest uppercase opacity-60">
+                <span>{formatDate(currentTime)}</span>
+                <span>{formatTime(currentTime)}</span>
+            </div>
         </div>
 
-        {/* Right Column: Tasks & Notes */}
-        <div className="h-full min-h-[500px]">
-          <TaskList 
-            tasks={tasks} 
-            setTasks={setTasks} 
-            notes={notes}
-            setNotes={setNotes}
-          />
-          
-          <div className="mt-6 flex justify-between items-center text-[10px] text-brand-muted uppercase tracking-widest font-mono opacity-50">
-            <span>Systems Online</span>
-            <span>CRISPYICECREAM.XYZ</span>
-          </div>
+        {/* RIGHT COLUMN - TASKS */}
+        <div className="h-full flex flex-col">
+            <div className="flex justify-between items-center mb-4 px-2">
+                <h2 className="text-xl font-black text-white uppercase tracking-tighter flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-brand-neon animate-pulse"></span>
+                    Mission Control
+                </h2>
+                <button 
+                    onClick={() => setShowSettingsModal(true)}
+                    className="p-2 text-brand-muted hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                >
+                    <Settings size={20} />
+                </button>
+            </div>
+            
+            <div className="flex-1 overflow-hidden">
+                <TaskList 
+                    tasks={tasks} 
+                    setTasks={setTasks} 
+                    notes={notes}
+                    setNotes={setNotes}
+                />
+            </div>
         </div>
-
       </div>
+      
+      {/* Background Ambience / Visuals */}
+      <div className="absolute bottom-0 left-0 right-0 h-1/3 opacity-20 pointer-events-none overflow-hidden">
+         <div className={`absolute bottom-0 w-[200%] h-full bg-brand-neon/20 blur-[60px] rounded-[100%] transition-all duration-1000 ${getWaveClass(1)}`}></div>
+         <div className={`absolute bottom-[-10%] left-[-50%] w-[200%] h-full bg-brand-neon/20 blur-[60px] rounded-[100%] animation-delay-2000 transition-all duration-1000 ${getWaveClass(2)}`}></div>
+      </div>
+
     </div>
   );
 };
